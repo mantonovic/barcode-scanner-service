@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 from pyzbar import pyzbar
 import base64
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -76,7 +77,8 @@ def health():
     return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5555))
     print("🚀 Barcode Scanner Service starting...")
-    print("📷 Server will be available at http://localhost:5000")
+    print(f"📷 Server will be available at http://localhost:{port}")
     print("🔍 Ready to scan barcodes!")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=True)

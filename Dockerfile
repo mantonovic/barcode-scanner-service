@@ -21,7 +21,10 @@ COPY server.py .
 COPY index.html .
 
 # Expose port
-EXPOSE 5000
+EXPOSE 5555
+
+# Set default port
+ENV PORT=5555
 
 # Run the application
 CMD ["python", "server.py"]

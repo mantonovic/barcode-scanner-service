@@ -43,7 +43,7 @@ This is the easiest way to run the service with all dependencies included.
 
 2. **Open your browser and navigate to:**
    ```
-   http://localhost:5000
+   http://localhost:5555
    ```
 
 3. **View logs (optional):**
@@ -94,8 +94,26 @@ docker rm barcode-scanner
 
 4. **Open your browser and navigate to:**
    ```
-   http://localhost:5000
+   http://localhost:5555
    ```
+
+### 🔧 Port Configuration
+
+The default port is **5555**, but you can configure it using the `PORT` environment variable:
+
+**Docker:**
+```bash
+# In docker-compose.yml, change:
+environment:
+  - PORT=8080
+ports:
+  - "8080:8080"
+```
+
+**Manual:**
+```bash
+PORT=8080 python server.py
+```
 
 ## How to Use
 
