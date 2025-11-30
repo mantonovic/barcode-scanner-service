@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto 20px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+        }
+
+        .result-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .result-data {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            word-break: break-all;
+            text-align: center;
+        }
+
+        .result-type {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .status.scanning {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 60%;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #28a745;
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0%, 100% { top: 0; }
+            50% { top: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📷 Barcode Scanner</h1>
+        <p class="subtitle">Point your camera at a barcode to scan it</p>
+
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <div id="scanOverlay" class="scan-overlay" style="display: none;">
+                <div class="scan-line"></div>
+            </div>
+        </div>
+        <canvas id="canvas"></canvas>
+
+        <div class="controls">
+            <button id="startBtn">Start Camera</button>
+            <button id="stopBtn" disabled>Stop Camera</button>
+        </div>
+
+        <div id="status" class="status">Click "Start Camera" to begin</div>
+
+        <div id="result" class="result">
+            <div class="result-label">Scan Result</div>
+            <div class="result-data">No barcode detected yet</div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
+        const scanOverlay = document.getElementById('scanOverlay');
+
+        let stream = null;
+        let scanning = false;
+        let scanInterval = null;
+
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+
+        async function startCamera() {
+            try {
+                statusDiv.textContent = 'Requesting camera access...';
+                
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                video.srcObject = stream;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                scanning = true;
+                scanOverlay.style.display = 'block';
+                
+                statusDiv.textContent = 'Camera active - Scanning for barcodes...';
+                statusDiv.classList.add('scanning');
+                
+                // Start scanning frames
+                scanInterval = setInterval(captureAndScan, 500);
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                statusDiv.textContent = 'Error: Could not access camera';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <div class="result-label">Error</div>
+                    <div class="result-data">${error.message}</div>
+                `;
+            }
+        }
+
+        function stopCamera() {
+            scanning = false;
+            
+            if (scanInterval) {
+                clearInterval(scanInterval);
+                scanInterval = null;
+            }
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            video.srcObject = null;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            scanOverlay.style.display = 'none';
+            
+            statusDiv.textContent = 'Camera stopped';
+            statusDiv.classList.remove('scanning');
+        }
+
+        async function captureAndScan() {
+            if (!scanning) return;
+
+            // Set canvas dimensions to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw current video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to base64
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Send to server
+            try {
+                const response = await fetch('/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                const result = await response.json();
+
+                if (result.found) {
+                    // Barcode found!
+                    scanning = false;
+                    clearInterval(scanInterval);
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <div class="result-label">✓ Barcode Detected!</div>
+                        <div class="result-data">${result.data}</div>
+                        <div class="result-type">Type: ${result.type}</div>
+                    `;
+                    
+                    statusDiv.textContent = 'Barcode found! Click "Start Camera" to scan another.';
+                    statusDiv.classList.remove('scanning');
+                    
+                    // Auto-restart scanning after 3 seconds
+                    setTimeout(() => {
+                        if (!scanning && stream) {
+                            scanning = true;
+                            scanInterval = setInterval(captureAndScan, 500);
+                            statusDiv.textContent = 'Camera active - Scanning for barcodes...';
+                            statusDiv.classList.add('scanning');
+                            resultDiv.className = 'result';
+                            resultDiv.innerHTML = `
+                                <div class="result-label">Scan Result</div>
+                                <div class="result-data">Scanning...</div>
+                            `;
+                        }
+                    }, 3000);
+                }
+
+            } catch (error) {
+                console.error('Error scanning:', error);
+            }
+        }
+    </script>
+</body>
+</html>
