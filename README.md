@@ -97,7 +97,9 @@ docker rm barcode-scanner
    http://localhost:5555
    ```
 
-### 🔧 Port Configuration
+### 🔧 Configuration
+
+#### Port Configuration
 
 The default port is **5555**, but you can configure it using the `PORT` environment variable:
 
@@ -114,6 +116,24 @@ ports:
 ```bash
 PORT=8080 python server.py
 ```
+
+#### Redirect URL Configuration
+
+Configure where scanned barcodes should redirect when using the `redirect: true` parameter:
+
+**Docker:**
+```bash
+# In docker-compose.yml:
+environment:
+  - REDIRECT_URL=http://localhost/search/{code}
+```
+
+**Manual:**
+```bash
+REDIRECT_URL="http://example.com/lookup/{code}" python server.py
+```
+
+The `{code}` placeholder will be automatically replaced with the scanned barcode value.
 
 ## How to Use
 
@@ -133,6 +153,9 @@ Receives a video frame and scans for barcodes.
 }
 ```
 
+**Optional Parameters:**
+- `redirect` (boolean): If `true` and a barcode is found, the service will redirect (HTTP 302) to the configured URL instead of returning JSON.
+
 **Response (barcode found):**
 ```json
 {
@@ -148,6 +171,40 @@ Receives a video frame and scans for barcodes.
   "found": false
 }
 ```
+
+**Redirect Mode:**
+
+When `redirect: true` is included in the request and a barcode is successfully decoded, the server will respond with a `302 Found` redirect to the URL configured in the `REDIRECT_URL` environment variable.
+
+**Request with redirect:**
+```json
+{
+  "image": "data:image/jpeg;base64,...",
+  "redirect": true
+}
+```
+
+**Response (barcode found):**
+- HTTP Status: `302 Found`
+- Location Header: The configured redirect URL with `{code}` replaced by the decoded barcode
+
+**Example:**
+```bash
+# Configure redirect URL
+export REDIRECT_URL="http://localhost/search/{code}"
+
+# When a barcode "1234567890" is scanned with redirect: true
+# The response will be:
+# HTTP/1.1 302 FOUND
+# Location: http://localhost/search/1234567890
+```
+
+**Default Configuration:**
+```
+REDIRECT_URL=http://localhost/search/{code}
+```
+
+The `{code}` placeholder will be replaced with the actual barcode data.
 
 ### `GET /health`
 Health check endpoint.

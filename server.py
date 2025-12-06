@@ -40,12 +40,16 @@ def scan_barcode():
     """
     Endpoint to receive video frames and scan for barcodes.
     Expects base64 encoded image data in JSON format.
+    Optional 'redirect' parameter: if true, redirects to configured URL with barcode.
     """
     try:
         data = request.get_json()
         
         if not data or 'image' not in data:
             return jsonify({'error': 'No image data provided'}), 400
+        
+        # Check if redirect is requested
+        should_redirect = data.get('redirect', False)
         
         # Decode base64 image
         image_data = data['image'].split(',')[1] if ',' in data['image'] else data['image']
@@ -66,6 +70,12 @@ def scan_barcode():
         # Scan for barcode
         result = decode_barcode(gray)
         
+        # If redirect is requested and barcode was found, redirect
+        if should_redirect and result.get('found'):
+            redirect_url_template = os.getenv('REDIRECT_URL', 'http://localhost/search/{code}')
+            redirect_url = redirect_url_template.replace('{code}', result['data'])
+            return '', 302, {'Location': redirect_url}
+        
         return jsonify(result)
     
     except Exception as e:
@@ -81,4 +91,7 @@ if __name__ == '__main__':
     print("🚀 Barcode Scanner Service starting...")
     print(f"📷 Server will be available at http://localhost:{port}")
     print("🔍 Ready to scan barcodes!")
+    redirect_url = os.getenv('REDIRECT_URL', None)
+    if redirect_url:
+        print(f"🔗 Redirect URL template set to: {redirect_url}")
     app.run(host='0.0.0.0', port=port, debug=True)
