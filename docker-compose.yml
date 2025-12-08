@@ -7,7 +7,10 @@ services:
     environment:
       - FLASK_ENV=production
       - PORT=5555
-      - REDIRECT_URL=http://localhost/v1/api/code/{code}
+      - REDIRECT_URL={protocol}://{host}/v1/api?action=SEARCH_CODE&code={code}
+      - IMAGES_LOCATION_COPY=/app/images
+    volumes:
+      - ./images:/app/images
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5555/health"]
