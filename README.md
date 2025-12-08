@@ -133,7 +133,29 @@ environment:
 REDIRECT_URL="http://example.com/lookup/{code}" python server.py
 ```
 
-The `{code}` placeholder will be automatically replaced with the scanned barcode value.
+The `{code}` placeholder will be automatically replaced with the scanned barcode value. Additional placeholders:
+- `{protocol}` - Replaced with the request protocol (http/https)
+- `{host}` - Replaced with the request host (hostname:port)
+
+#### Image Archive Configuration
+
+Optionally save a copy of all scanned images to a directory for archival or debugging purposes:
+
+**Docker:**
+```bash
+# In docker-compose.yml:
+environment:
+  - IMAGES_LOCATION_COPY=/app/images
+volumes:
+  - ./images:/app/images
+```
+
+**Manual:**
+```bash
+IMAGES_LOCATION_COPY="/path/to/save/images" python server.py
+```
+
+Images are saved with timestamped filenames like `scan_20251207_143052_123456.jpg`. If the directory doesn't exist, it will be created automatically.
 
 ## How to Use
 
